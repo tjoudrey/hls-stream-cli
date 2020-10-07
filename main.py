@@ -1,8 +1,11 @@
+# requires ffmpg
+
 import time
 
 import moviepy.editor as mpy
 import gizeh as gz
 import click
+import os
 
 from math import pi
 
@@ -53,7 +56,13 @@ def gvas():
         color=WHITE,
         col_opacity=1).set_duration(10)
 
-    video.write_videofile('video_with_python.mp4', fps=10)
+    video.write_videofile('hls_files/stream_video.mp4', fps=10)
+    generateHlsPlaylist('stream_video.mp4')
+
+
+def generateHlsPlaylist(video_file_name):
+    os.system(
+        'ffmpeg -i test.mp4 -vn hls_files/test.mp3 -c:v libx264 -c:a aac -strict -2 -f hls -hls_list_size 0 hls_files/test.m3u8')
 
 
 if __name__ == '__main__':
