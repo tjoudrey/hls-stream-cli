@@ -11,7 +11,7 @@ A cli tool to create a hls stream on a local port for use in application testing
 
 ### Usage:
 
-main.py stream [OPTIONS]
+python3 main.py stream [OPTIONS]
 
 Stream a video
 
