@@ -1,36 +1,9 @@
 # requires ffmpg
 
-import time
-
-import moviepy.editor as mpy
-import gizeh as gz
 import click
+import http.server
+import socketserver
 import os
-
-from math import pi
-
-BLUE = (59/255, 89/255, 152/255)
-WHITE = (255, 255, 255)
-VIDEO_SIZE = (640, 480)
-
-
-def render_text(t):
-    surface = gz.Surface(640, 60, bg_color=(1, 1, 1))
-    text = gz.text("Text", fontfamily="Charter",
-                   fontsize=30, fontweight='bold', fill=BLUE, xy=(320, 40))
-
-    text.draw(surface)
-    return surface.get_npimage()
-
-
-def draw_stars(t):
-    surface = gz.Surface(640, 120, bg_color=(1, 1, 1))
-    for i in range(5):
-        star = gz.star(nbranches=5, radius=120*0.2,
-                       xy=[100*(i+1), 50], fill=(0, 1, 0),
-                       angle=t*pi)
-        star.draw(surface)
-    return surface.get_npimage()
 
 
 @click.group()
@@ -38,31 +11,38 @@ def cli():
     click.echo('Starting')
 
 
-@cli.command(help="Generate Video and Stream")
-def gvas():
-
-    text = mpy.VideoClip(render_text, duration=10)
-    stars = mpy.VideoClip(draw_stars, duration=10)
-    video = mpy.CompositeVideoClip(
-        [
-            text.set_position(
-                ('center')),
-            stars.set_position(
-                ('center', text.size[1])
-            )
-        ],
-        size=VIDEO_SIZE).\
-        on_color(
-        color=WHITE,
-        col_opacity=1).set_duration(10)
-
-    video.write_videofile('hls_files/stream_video.mp4', fps=10)
-    generateHlsPlaylist('stream_video.mp4')
+@cli.command(help="stream a video")
+@click.option('--port', default=8000, help="specify the port to serve the stream over")
+@click.option('--mp4', default="default.mp4", help="specify the file to be streamed")
+def stream(port, mp4):
+    generateHlsPlaylist(mp4)
+    serveStream(port, mp4)
 
 
-def generateHlsPlaylist(video_file_name):
+# @cli.command(help="Generate and Stream a video")
+# @click.option('--port', default=8000, help="Specify the port to serve the stream over")
+# def streamGeneratedVideo(port):
+#     generateMp4()
+#     generateHlsPlaylist(mp4)
+#     serveStream(port)
+
+
+def generateHlsPlaylist(videoFile):
+    os.system('cd hls_files/')
+    os.system('rm -rfy *')
+    os.system('cd ..')
     os.system(
-        'ffmpeg -i test.mp4 -vn hls_files/test.mp3 -c:v libx264 -c:a aac -strict -2 -f hls -hls_list_size 0 hls_files/test.m3u8')
+        'ffmpeg -i '+videoFile+' -vn hls_files/'+videoFile.split('.')[0]+'.mp3 -c:v libx264 -c:a aac -strict -2 -f hls -hls_list_size 0 hls_files/'+videoFile.split('.')[0]+'.m3u8')
+
+
+def serveStream(port, videoFile):
+    os.chdir('hls_files')
+    Handler = http.server.SimpleHTTPRequestHandler
+    httpd = socketserver.TCPServer(("", port), Handler)
+    print("serving at port", port)
+    print("Stream available at http://localhost:" +
+          str(port)+"/"+videoFile.split('.')[0]+".m3u8")
+    httpd.serve_forever()
 
 
 if __name__ == '__main__':
